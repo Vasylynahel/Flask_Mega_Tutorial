@@ -46,4 +46,4 @@ if not app.debug:  # програма без режиму налагодженн
     app.logger.setLevel(logging.INFO)
     app.logger.info('Microblog startup')
 
-  from app import routes, models, errors
+from app import routes, models, errors
