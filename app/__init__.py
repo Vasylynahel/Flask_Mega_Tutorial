@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_mail import Mail
+from flask_moment import Moment
 from logging.handlers import SMTPHandler
 from logging.handlers import RotatingFileHandler
 
@@ -15,7 +16,7 @@ app.config.from_object(Config)
 login = LoginManager(app)
 login.login_view = 'login'
 mail = Mail(app)
-
+moment = Moment(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
