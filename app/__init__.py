@@ -1,7 +1,7 @@
 import logging
 import os
 
-from flask import Flask
+from flask import Flask, request
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -10,6 +10,10 @@ from flask_mail import Mail
 from flask_moment import Moment
 from logging.handlers import SMTPHandler
 from logging.handlers import RotatingFileHandler
+from flask_babel import Babel
+
+def get_locale():
+  return 'es'
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -19,6 +23,7 @@ mail = Mail(app)
 moment = Moment(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+babel = Babel(app, locale_selector=get_locale)
 
 if not app.debug:  # програма без режиму налагодження
   if app.config['MAIL_SERVER']:  #  і коли сервер електронки є в конфіг
