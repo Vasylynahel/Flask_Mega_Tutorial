@@ -2,6 +2,7 @@
 #  app.config['SECRET_KEY'] = 'you-will-never-guess'
 # ...and more variables here as needed
 import os
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
@@ -16,3 +17,4 @@ class Config:
     ADMINS = ['vasilinkailcuk@gmail.com']
     POSTS_PER_PAGE = 3
     LANGUAGES = ['en', 'es']
+    MS_TRANSLATOR_KEY = os.environ.get('MS_TRANSLATOR_KEY')
