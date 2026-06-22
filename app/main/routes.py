@@ -6,21 +6,19 @@ from flask_babel import _, get_locale
 import sqlalchemy as sa
 from langdetect import detect, LangDetectException
 from app import db
-from app.main.forms import EditProfileForm, EmptyForm, PostForm
+from app.main.forms import EditProfileForm, EmptyForm, PostForm, SearchForm, \
+    MessageForm
 from app.models import User, Post, Message, Notification
 from app.translate import translate
 from app.main import bp
-from flask import g
-from app.main.forms import SearchForm
-from app.main.forms import MessageForm
-from app.models import Message
-from app.models import Notification
+
 
 @bp.before_app_request
 def before_request():
     if current_user.is_authenticated:
         current_user.last_seen = datetime.now(timezone.utc)
         db.session.commit()
+        g.search_form = SearchForm()
     g.locale = str(get_locale())
 
 
@@ -86,6 +84,14 @@ def user(username):
     form = EmptyForm()
     return render_template('user.html', user=user, posts=posts.items,
                            next_url=next_url, prev_url=prev_url, form=form)
+
+
+@bp.route('/user/<username>/popup')
+@login_required
+def user_popup(username):
+    user = db.first_or_404(sa.select(User).where(User.username == username))
+    form = EmptyForm()
+    return render_template('user_popup.html', user=user, form=form)
 
 
 @bp.route('/edit_profile', methods=['GET', 'POST'])
@@ -155,13 +161,6 @@ def translate_text():
                               data['source_language'],
                               data['dest_language'])}
 
-@bp.before_app_request
-def before_request():
-    if current_user.is_authenticated:
-        current_user.last_seen = datetime.now(timezone.utc)
-        db.session.commit()
-        g.search_form = SearchForm()
-    g.locale = str(get_locale())
 
 @bp.route('/search')
 @login_required
@@ -178,12 +177,6 @@ def search():
     return render_template('search.html', title=_('Search'), posts=posts,
                            next_url=next_url, prev_url=prev_url)
 
-@bp.route('/user/<username>/popup')
-@login_required
-def user_popup(username):
-    user = db.first_or_404(sa.select(User).where(User.username == username))
-    form = EmptyForm()
-    return render_template('user_popup.html', user=user, form=form)
 
 @bp.route('/send_message/<recipient>', methods=['GET', 'POST'])
 @login_required
@@ -193,14 +186,15 @@ def send_message(recipient):
     if form.validate_on_submit():
         msg = Message(author=current_user, recipient=user,
                       body=form.message.data)
+        db.session.add(msg)
         user.add_notification('unread_message_count',
                               user.unread_message_count())
-        db.session.add(msg)
         db.session.commit()
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
                            form=form, recipient=recipient)
+
 
 @bp.route('/messages')
 @login_required
@@ -221,6 +215,18 @@ def messages():
     return render_template('messages.html', messages=messages.items,
                            next_url=next_url, prev_url=prev_url)
 
+
+@bp.route('/export_posts')
+@login_required
+def export_posts():
+    if current_user.get_task_in_progress('export_posts'):
+        flash(_('An export task is currently in progress'))
+    else:
+        current_user.launch_task('export_posts', _('Exporting posts...'))
+        db.session.commit()
+    return redirect(url_for('main.user', username=current_user.username))
+
+
 @bp.route('/notifications')
 @login_required
 def notifications():
@@ -233,13 +239,3 @@ def notifications():
         'data': n.get_data(),
         'timestamp': n.timestamp
     } for n in notifications]
-
-@bp.route('/export_posts')
-@login_required
-def export_posts():
-    if current_user.get_task_in_progress('export_posts'):
-        flash(_('An export task is currently in progress'))
-    else:
-        current_user.launch_task('export_posts', _('Exporting posts...'))
-        db.session.commit()
-    return redirect(url_for('main.user', username=current_user.username))
